@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Vehicle Telemetry Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- MQTT.js library -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    h1 { font-size: 26px; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin: 10px 0; }
+    .label { color: #555; }
+    .value { font-size: 22px; font-weight: bold; }
+    #status { margin-bottom: 15px; font-weight: bold; }
+    .ok { color: green; }
+    .bad { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Vehicle Telemetry Dashboard</h1>
+  <p>Data from MQTT topic: <b>myvehicle/can</b></p>
+
+  <div id="status" class="bad">Connecting to MQTT...</div>
+
+  <div class="card">
+    <span class="label">Speed (km/h): </span>
+    <span id="speed" class="value">--</span>
+  </div>
+
+  <div class="card">
+    <span class="label">Engine Temp (°C): </span>
+    <span id="temp" class="value">--</span>
+  </div>
+
+  <div class="card">
+    <span class="label">Fuel Level (%): </span>
+    <span id="fuel" class="value">--</span>
+  </div>
+
+  <div class="card">
+    <span class="label">Timestamp: </span>
+    <span id="ts" class="value">--</span>
+  </div>
+
+<script>
+  const topic = "myvehicle/can";
+  const client = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+
+  const statusEl = document.getElementById("status");
+  const speedEl  = document.getElementById("speed");
+  const tempEl   = document.getElementById("temp");
+  const fuelEl   = document.getElementById("fuel");
+  const tsEl     = document.getElementById("ts");
+
+  client.on("connect", () => {
+    statusEl.textContent = "Connected to MQTT";
+    statusEl.className = "ok";
+    client.subscribe(topic);
+  });
+
+  client.on("message", (t, msg) => {
+    try {
+      const data = JSON.parse(msg.toString());
+      speedEl.textContent = data.speed ?? "--";
+      tempEl.textContent  = data.temp ?? data.engine_temp ?? "--";
+      fuelEl.textContent  = data.fuel ?? data.fuel_level ?? "--";
+      tsEl.textContent    = data.timestamp || new Date().toISOString();
+    } catch(e) {
+      console.error(e);
+    }
+  });
+
+  client.on("error", () => {
+    statusEl.textContent = "MQTT Error";
+    statusEl.className = "bad";
+  });
+</script>
+</body>
+</html>
